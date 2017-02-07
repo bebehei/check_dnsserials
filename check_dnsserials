@@ -26,6 +26,7 @@ export PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
 PROGNAME=$(basename $0)
 PROGPATH=$(echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,')
 REVISION="1.0.1"
+COMMAND_DIG=$(command -v dig)
 
 # source a utils.sh from nagios-plugins
 # if the check is not executed in the normal check-directory,
@@ -107,6 +108,9 @@ while getopts ":vhd:H:s:c:w:" opt; do
 	esac
 done
 
+if [[ -z "$COMMAND_DIG" ]]; then
+	error "No command 'dig' available."
+fi
 
 if [[ -z "$domain" ]]; then
 	error "No domain specified!"
@@ -127,7 +131,7 @@ fi
 # if no master given, use the standard DNS to determine the master
 if [ -z "$master" ]; then
 	debug "getting master DNS from system"
-	soa=($(dig +short SOA $domain | cut -d " " -f 1,3))
+	soa=($($COMMAND_DIG +short SOA $domain | cut -d " " -f 1,3))
 	master=${soa[0]}
 fi
 verbose "Master DNS: $master"
@@ -135,15 +139,15 @@ verbose "Master DNS: $master"
 # if no serial given, get the master server to determine the serial
 if [ -z "$serial" ]; then
 	debug "getting master serial from $master"
-	soa=($(dig +short SOA @$master $domain | cut -d " " -f 1,3))
+	soa=($($COMMAND_DIG +short SOA @$master $domain | cut -d " " -f 1,3))
 	serial=${soa[1]}
 fi
 verbose "Master serial: $serial"
 
 # iterate the NS-RRs grabbed from master dns-server for the domain
-for server in $(dig +short NS @$master $domain); do
+for server in $($COMMAND_DIG +short NS @$master $domain); do
 	debug "getting slave serial from $server"
-	serial_slave=$(dig +short SOA @$server $domain | cut -d " " -f 3)
+	serial_slave=$($COMMAND_DIG +short SOA @$server $domain | cut -d " " -f 3)
 	if [ "x$serial_slave" = "x$serial" ]; then
 		verbose "ok: serial: $serial $domain $server"
 		else
