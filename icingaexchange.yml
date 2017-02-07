@@ -7,6 +7,13 @@ target: Website,Service
 type: Plugin
 license: GPL 
 releases:
+    - name: 1.0.2
+      description: "Small bugfixes"
+      files:
+         - name: check_dnsserials-1.0.2.tar.gz
+           description: plugin tarbal
+           url: "https://github.com/bebehei/check_dnsserials/archive/v1.0.2.tar.gz"
+           checksum: 1051e4244f0cd8a28f47129365c86a83
     - name: 1.0.1
       description: "Adding configurations for icinga2"
       files:
