@@ -98,11 +98,11 @@ while getopts ":vhd:H:s:c:w:" opt; do
 			warn=$OPTARG
 			;;
 		\?)
-			error "Invalid option: -args"
+			error "Invalid option: -$OPTARG"
 			usage
 			;;
 		:)
-			error "Option -args requires an argument."
+			error "Option -$OPTARG requires an argument."
 			usage
 			;;
 	esac
