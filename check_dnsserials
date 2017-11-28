@@ -38,6 +38,9 @@ elif [[ -r /usr/lib/nagios/plugins/utils.sh && -f /usr/lib/nagios/plugins/utils.
 	. /usr/lib/nagios/plugins/utils.sh
 elif [[ -r /usr/lib/monitoring-plugins/utils.sh && -f /usr/lib/monitoring-plugins/utils.sh ]]; then
 	. /usr/lib/monitoring-plugins/utils.sh
+else
+	echo "Cannot include monitoring plugins' \"utils.sh\"." >&2
+	exit 1
 fi
 
 debug(){
