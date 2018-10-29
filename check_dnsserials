@@ -105,25 +105,18 @@ while getopts ":vhd:H:s:c:w:" opt; do
 	esac
 done
 
-if [[ -z "$COMMAND_DIG" ]]; then
-	error "No command 'dig' available."
-fi
+[ -n "${COMMAND_DIG}" ] || error "No command 'dig' available."
+[ -n "${domain}" ]      || error "No domain specified!"
 
-if [[ -z "$domain" ]]; then
-	error "No domain specified!"
-fi
-verbose "domain $domain"
+verbose "domain ${domain}"
 
 # check warning and critical values
-if [ -n "$crit" ] && check_range $crit 0: ; then
-	error "Critical value has to be positive."
-fi
-if [ -n "$warn" ] && check_range $warn 0: ; then
-	error "Warning value has to be positive."
-fi
-if [ -n "$warn" ] && [ -n "$crit" ] && check_range $warn 0:$crit ; then
-	error "Warning value has to be lower than critical."
-fi
+[ -z "${crit}" ] || [ "${crit}" -ge 0 ] \
+	|| error "Critical value has to be positive."
+[ -z "${warn}" ] || [ "${warn}" -ge 0 ] \
+	|| error "Warning value has to be positive."
+[ -z "${warn}" ] || [ -z "${crit}" ] || [ "${warn}" -le "${crit}" ] \
+	|| error "Warning value has to be lower than critical."
 
 # if no master given, use the standard DNS to determine the master
 if [ -z "$master" ]; then
