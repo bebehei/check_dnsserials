@@ -121,8 +121,8 @@ verbose "Domain ${domain}"
 # if no master given, use the standard DNS to determine the master
 if [ -z "${master}" ]; then
 	debug "Getting master NS from DNS"
-	soa=($("${COMMAND_DIG}" +short SOA "${domain}" | cut -d " " -f 1,3))
-	master="${soa[0]}"
+	read -r master _ \
+		<<< "$("${COMMAND_DIG}" +short SOA "${domain}")"
 fi
 [ -n "${master}" ] || error "Cannot find a master NS for ${domain}"
 verbose "Master NS: ${master}"
@@ -130,8 +130,8 @@ verbose "Master NS: ${master}"
 # if no serial given, get the master server to determine the serial
 if [ -z "${serial}" ]; then
 	debug "Getting master serial from ${master}"
-	soa=($("${COMMAND_DIG}" +short SOA "@${master}" "${domain}" | cut -d " " -f 1,3))
-	serial="${soa[1]}"
+	read -r _ _ serial _ \
+		<<< "$("${COMMAND_DIG}" +short SOA "@${master}" "${domain}")"
 fi
 [ -n "${serial}" ] || error "Cannot grab a serial number from master ${master}"
 verbose "Master serial: ${serial}"
@@ -139,7 +139,9 @@ verbose "Master serial: ${serial}"
 # iterate the NS-RRs grabbed from master dns-server for the domain
 for server in $("${COMMAND_DIG}" +short NS "@${master}" "${domain}"); do
 	debug "Getting slave serial from ${server}"
-	serial_slave=$("${COMMAND_DIG}" +short SOA "@${server}" "${domain}" | cut -d " " -f 3)
+	read -r _ _ serial_slave _ \
+		<<< "$("${COMMAND_DIG}" +short SOA "@${server}" "${domain}")"
+
 	if [ "x${serial_slave}" = "x${serial}" ]; then
 		verbose "OK:  ${domain} ${server} ${serial}"
 		else
