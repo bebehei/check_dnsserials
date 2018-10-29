@@ -49,21 +49,9 @@ if ! "${utils_found:-false}"; then
 	exit 1
 fi
 
-debug(){
-	if [ $verbose -gt 1 ]; then
-		echo "$*"
-	fi
-}
-verbose(){
-	if [ $verbose -gt 0 ]; then
-		echo "$*"
-	fi
-}
-
-error(){
-	echo "$*" >&2
-	exit $STATE_UNKNOWN
-}
+error(){ printf '%s\n' "${@}" >&2; exit "${STATE_UNKNOWN}"; }
+debug(){   [ "${verbose}" -lt 2 ] || printf '%s\n' "${@}"; }
+verbose(){ [ "${verbose}" -lt 1 ] || printf '%s\n' "${@}"; }
 
 usage(){
 	cat >&2 <<-FIN 
