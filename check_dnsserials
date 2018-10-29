@@ -32,13 +32,19 @@ COMMAND_DIG=$(command -v dig)
 # if the check is not executed in the normal check-directory,
 # we'll search on common places. This gives us the ability to
 # avoid problems with the package-manager
-if [[ -r $PROGPATH/utils.sh && -f $PROGPATH/utils.sh ]]; then
-	. $PROGPATH/utils.sh
-elif [[ -r /usr/lib/nagios/plugins/utils.sh && -f /usr/lib/nagios/plugins/utils.sh ]]; then
-	. /usr/lib/nagios/plugins/utils.sh
-elif [[ -r /usr/lib/monitoring-plugins/utils.sh && -f /usr/lib/monitoring-plugins/utils.sh ]]; then
-	. /usr/lib/monitoring-plugins/utils.sh
-else
+for script in \
+	"${PROGPATH}/utils.sh" \
+	/usr/lib/nagios/plugins/utils.sh \
+	/usr/lib/monitoring-plugins/utils.sh \
+	; do
+	if [ -r "${script}" ] && [ -f "${script}" ]; then
+		. "${script}"
+		utils_found=true
+		break
+	fi
+done
+
+if ! "${utils_found:-false}"; then
 	echo "Cannot include monitoring plugins' \"utils.sh\"." >&2
 	exit 1
 fi
