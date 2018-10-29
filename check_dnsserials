@@ -54,15 +54,15 @@ debug(){   [ "${verbose}" -lt 2 ] || printf '%s\n' "${@}"; }
 verbose(){ [ "${verbose}" -lt 1 ] || printf '%s\n' "${@}"; }
 
 usage(){
-	cat >&2 <<-FIN 
-	usage: $PROGNAME -d DOMAIN [-H DNS-MASTER] [ -s SOA-SERIAL] [-w FAILS] [-c FAILS] [ -h -v ]
+	cat <<-FIN
+	usage: ${PROGNAME} -d DOMAIN [-H DNS-MASTER] [ -s SOA-SERIAL] [-w FAILS] [-c FAILS] [ -h -v ]
 
 	DNS-MASTER: The master to get all main informations from
 	SOA-SERIAL: The serial number used to compare all DNS slaves (not recommended to set)
 	FAILS: The amount of DNS servers allowed having another serial (=> amount of dns servers not in sync) (defaults to 0)
 
 	FIN
-	exit $STATE_UNKNOWN
+	exit "${STATE_UNKNOWN}"
 }
 
 master=""
@@ -95,12 +95,12 @@ while getopts ":vhd:H:s:c:w:" opt; do
 			warn=$OPTARG
 			;;
 		\?)
-			error "Invalid option: -$OPTARG"
-			usage
+			error "Invalid option: -${OPTARG}" \
+				"Use '-h' to acquire usage output."
 			;;
 		:)
-			error "Option -$OPTARG requires an argument."
-			usage
+			error "Option -${OPTARG} requires an argument." \
+				"Use '-h' to acquire usage output."
 			;;
 	esac
 done
