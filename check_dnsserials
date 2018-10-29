@@ -55,12 +55,14 @@ verbose(){ [ "${verbose}" -lt 1 ] || printf '%s\n' "${@}"; }
 
 usage(){
 	cat <<-FIN
-	usage: ${PROGNAME} -d DOMAIN [-H DNS-MASTER] [ -s SOA-SERIAL] [-w FAILS] [-c FAILS] [ -h -v ]
+	usage: ${PROGNAME} -d DOMAIN [-H DNS-MASTER] [-S DNS-SLAVES] [ -s SOA-SERIAL] [-w FAILS] [-c FAILS] [ -h -v ]
 
 	DNS-MASTER: The master to get all main informations from
+	DNS-SLAVES: The slaves to compare with the master's serial
 	SOA-SERIAL: The serial number used to compare all DNS slaves (not recommended to set)
 	FAILS: The amount of DNS servers allowed having another serial (=> amount of dns servers not in sync) (defaults to 0)
 
+	If any of DNS-MASTER, DNS-SLAVES or SOA-SERIAL is unset, it'll get queried from the DNS system.
 	FIN
 	exit "${STATE_UNKNOWN}"
 }
@@ -71,7 +73,7 @@ verbose=0
 fails=0
 state="${STATE_UNKNOWN}"
 
-while getopts ":vhd:H:s:c:w:" opt; do
+while getopts ":vhd:H:S:s:c:w:" opt; do
 	case "${opt}" in
 		v)
 			verbose=$((verbose + 1))
@@ -84,6 +86,9 @@ while getopts ":vhd:H:s:c:w:" opt; do
 			;;
 		H)
 			master="${OPTARG}"
+			;;
+		S)
+			slaves="${OPTARG}"
 			;;
 		s)
 			serial="${OPTARG}"
@@ -136,8 +141,15 @@ fi
 [ -n "${serial}" ] || error "Cannot grab a serial number from master ${master}"
 verbose "Master serial: ${serial}"
 
-# iterate the NS-RRs grabbed from master dns-server for the domain
-for server in $("${COMMAND_DIG}" +short NS "@${master}" "${domain}"); do
+# Grab the slaves from DNS
+if [ -z "${slaves}" ]; then
+	debug "Getting slave NS information from ${master}"
+	slaves="$("${COMMAND_DIG}" +short NS "@${master}" "${domain}")"
+fi
+[ -n "${slaves}" ] || error "Cannot query the NS entries for ${domain}"
+
+# Iterate over the given NS-RRs and test serials
+for server in ${slaves}; do
 	debug "Getting slave serial from ${server}"
 	read -r _ _ serial_slave _ \
 		<<< "$("${COMMAND_DIG}" +short SOA "@${server}" "${domain}")"
