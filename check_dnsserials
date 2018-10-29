@@ -152,7 +152,7 @@ fi
 for server in ${slaves}; do
 	debug "Getting slave serial from ${server}"
 	read -r _ _ serial_slave _ \
-		<<< "$("${COMMAND_DIG}" +short SOA "@${server}" "${domain}")"
+		<<< "$("${COMMAND_DIG}" +short +norecurse SOA "@${server}" "${domain}")"
 
 	if [ "x${serial_slave}" = "x${serial}" ]; then
 		verbose "OK:  ${domain} ${server} ${serial}"
