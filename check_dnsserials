@@ -148,15 +148,15 @@ for server in $("${COMMAND_DIG}" +short NS "@${master}" "${domain}"); do
 done
 
 # interpret the amount of fails
-if [[ -n "${warn}" && "${fails}" -gt "${warn}" ]]; then
+if [ -n "${warn}" ] && [ "${fails}" -gt "${warn}" ]; then
 	state="${STATE_WARN}"
 	msg="DNS WARN, master serial: ${serial}, fails: ${fails}"
 fi
-if [[ -n "${crit}" && "${fails}" -gt "${crit}" ]]; then
+if [ -n "${crit}" ] && [ "${fails}" -gt "${crit}" ]; then
 	state="${STATE_CRITICAL}"
 	msg="DNS CRITICAL, master serial: ${serial}, fails: ${fails}"
 fi
-if [[ -z "${crit}" && -z "${warn}" && "${fails}" -gt 0 ]]; then
+if [ -z "${crit}" ] && [ -z "${warn}" ] && [ "${fails}" -gt 0 ]; then
 	state="${STATE_CRITICAL}"
 	msg="DNS CRITICAL, master serial: ${serial}, fails: ${fails}"
 	else
