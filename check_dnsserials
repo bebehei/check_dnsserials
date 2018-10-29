@@ -168,5 +168,5 @@ if [ -z "${crit}" ] && [ -z "${warn}" ] && [ "${fails}" -gt 0 ]; then
 		state="${STATE_OK}"
 fi
 
-echo "${msg}"
+printf '%s\n' "${msg}"
 exit "${state}"
