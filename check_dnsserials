@@ -69,10 +69,10 @@ master=""
 serial=""
 verbose=0
 fails=0
-state=$STATE_UNKNOWN
+state="${STATE_UNKNOWN}"
 
 while getopts ":vhd:H:s:c:w:" opt; do
-	case $opt in
+	case "${opt}" in
 		v)
 			verbose=$(($verbose + 1))
 			;;
@@ -80,19 +80,19 @@ while getopts ":vhd:H:s:c:w:" opt; do
 			usage
 			;;
 		d)
-			domain=$OPTARG
+			domain="${OPTARG}"
 			;;
 		H)
-			master=$OPTARG
+			master="${OPTARG}"
 			;;
 		s)
-			serial=$OPTARG
+			serial="${OPTARG}"
 			;;
 		c)
-			crit=$OPTARG
+			crit="${OPTARG}"
 			;;
 		w)
-			warn=$OPTARG
+			warn="${OPTARG}"
 			;;
 		\?)
 			error "Invalid option: -${OPTARG}" \
