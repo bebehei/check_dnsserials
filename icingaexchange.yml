@@ -7,6 +7,13 @@ target: Website,Service
 type: Plugin
 license: GPL 
 releases:
+    - name: 1.1.0
+      description: "Adds +norecurse and -S, see https://github.com/bebehei/check_dnsserials/releases/tag/v1.1.0"
+      files:
+         - name: check_dnsserials-1.1.0.tar.gz
+           description: plugin tarbal
+           url: "https://github.com/bebehei/check_dnsserials/archive/v1.1.0.tar.gz"
+           checksum: ee0f224f72738c6a256dff76af56c7b1
     - name: 1.0.2
       description: "Small bugfixes"
       files:
