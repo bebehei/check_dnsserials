@@ -23,159 +23,162 @@
 # comparing the serial-number in the domains SOA-RR
 
 export PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
-PROGNAME=$(basename $0)
-PROGPATH=$(echo $0 | sed -e 's,[\\/][^\\/][^\\/]*$,,')
+PROGNAME="$(basename "${0}")"
+PROGPATH="$(sed -e 's,[\\/][^\\/][^\\/]*$,,' <<< "${0}")"
 REVISION="1.0.2"
-COMMAND_DIG=$(command -v dig)
+COMMAND_DIG="$(command -v "${COMMAND_DIG:-dig}")"
 
 # source a utils.sh from nagios-plugins
 # if the check is not executed in the normal check-directory,
 # we'll search on common places. This gives us the ability to
 # avoid problems with the package-manager
-if [[ -r $PROGPATH/utils.sh && -f $PROGPATH/utils.sh ]]; then
-	. $PROGPATH/utils.sh
-elif [[ -r /usr/lib/nagios/plugins/utils.sh && -f /usr/lib/nagios/plugins/utils.sh ]]; then
-	. /usr/lib/nagios/plugins/utils.sh
-elif [[ -r /usr/lib/monitoring-plugins/utils.sh && -f /usr/lib/monitoring-plugins/utils.sh ]]; then
-	. /usr/lib/monitoring-plugins/utils.sh
-else
+for script in \
+	"${PROGPATH}/utils.sh" \
+	/usr/lib/nagios/plugins/utils.sh \
+	/usr/lib/monitoring-plugins/utils.sh \
+	; do
+	if [ -r "${script}" ] && [ -f "${script}" ]; then
+		. "${script}"
+		utils_found=true
+		break
+	fi
+done
+
+if ! "${utils_found:-false}"; then
 	echo "Cannot include monitoring plugins' \"utils.sh\"." >&2
 	exit 1
 fi
 
-debug(){
-	if [ $verbose -gt 1 ]; then
-		echo "$*"
-	fi
-}
-verbose(){
-	if [ $verbose -gt 0 ]; then
-		echo "$*"
-	fi
-}
-
-error(){
-	echo "$*" >&2
-	exit $STATE_UNKNOWN
-}
+error(){ printf '%s\n' "${@}" >&2; exit "${STATE_UNKNOWN}"; }
+debug(){   [ "${verbose}" -lt 2 ] || printf '%s\n' "${@}"; }
+verbose(){ [ "${verbose}" -lt 1 ] || printf '%s\n' "${@}"; }
 
 usage(){
-	cat >&2 <<-FIN 
-	usage: $PROGNAME -d DOMAIN [-H DNS-MASTER] [ -s SOA-SERIAL] [-w FAILS] [-c FAILS] [ -h -v ]
+	cat <<-FIN
+	usage: ${PROGNAME} -d DOMAIN [-H DNS-MASTER] [-S DNS-SLAVES] [ -s SOA-SERIAL] [-w FAILS] [-c FAILS] [ -h -v ]
 
 	DNS-MASTER: The master to get all main informations from
+	DNS-SLAVES: The slaves to compare with the master's serial
 	SOA-SERIAL: The serial number used to compare all DNS slaves (not recommended to set)
 	FAILS: The amount of DNS servers allowed having another serial (=> amount of dns servers not in sync) (defaults to 0)
 
+	If any of DNS-MASTER, DNS-SLAVES or SOA-SERIAL is unset, it'll get queried from the DNS system.
 	FIN
-	exit $STATE_UNKNOWN
+	exit "${STATE_UNKNOWN}"
 }
 
 master=""
 serial=""
 verbose=0
 fails=0
-state=$STATE_UNKNOWN
+state="${STATE_UNKNOWN}"
 
-while getopts ":vhd:H:s:c:w:" opt; do
-	case $opt in
+while getopts ":vhd:H:S:s:c:w:" opt; do
+	case "${opt}" in
 		v)
-			verbose=$(($verbose + 1))
+			verbose=$((verbose + 1))
 			;;
 		h)
 			usage
 			;;
 		d)
-			domain=$OPTARG
+			domain="${OPTARG}"
 			;;
 		H)
-			master=$OPTARG
+			master="${OPTARG}"
+			;;
+		S)
+			slaves="${OPTARG}"
 			;;
 		s)
-			serial=$OPTARG
+			serial="${OPTARG}"
 			;;
 		c)
-			crit=$OPTARG
+			crit="${OPTARG}"
 			;;
 		w)
-			warn=$OPTARG
+			warn="${OPTARG}"
 			;;
 		\?)
-			error "Invalid option: -$OPTARG"
-			usage
+			error "Invalid option: -${OPTARG}" \
+				"Use '-h' to acquire usage output."
 			;;
 		:)
-			error "Option -$OPTARG requires an argument."
-			usage
+			error "Option -${OPTARG} requires an argument." \
+				"Use '-h' to acquire usage output."
 			;;
 	esac
 done
 
-if [[ -z "$COMMAND_DIG" ]]; then
-	error "No command 'dig' available."
-fi
+[ -n "${COMMAND_DIG}" ] || error "No command 'dig' available."
+[ -n "${domain}" ]      || error "No domain specified!"
 
-if [[ -z "$domain" ]]; then
-	error "No domain specified!"
-fi
-verbose "domain $domain"
+verbose "Domain ${domain}"
 
 # check warning and critical values
-if [ -n "$crit" ] && check_range $crit 0: ; then
-	error "Critical value has to be positive."
-fi
-if [ -n "$warn" ] && check_range $warn 0: ; then
-	error "Warning value has to be positive."
-fi
-if [ -n "$warn" ] && [ -n "$crit" ] && check_range $warn 0:$crit ; then
-	error "Warning value has to be lower than critical."
-fi
+[ -z "${crit}" ] || [ "${crit}" -ge 0 ] \
+	|| error "Critical value has to be positive."
+[ -z "${warn}" ] || [ "${warn}" -ge 0 ] \
+	|| error "Warning value has to be positive."
+[ -z "${warn}" ] || [ -z "${crit}" ] || [ "${warn}" -le "${crit}" ] \
+	|| error "Warning value has to be lower than critical."
 
 # if no master given, use the standard DNS to determine the master
-if [ -z "$master" ]; then
-	debug "getting master DNS from system"
-	soa=($($COMMAND_DIG +short SOA $domain | cut -d " " -f 1,3))
-	master=${soa[0]}
+if [ -z "${master}" ]; then
+	debug "Getting master NS from DNS"
+	read -r master _ \
+		<<< "$("${COMMAND_DIG}" +short SOA "${domain}")"
 fi
-verbose "Master DNS: $master"
+[ -n "${master}" ] || error "Cannot find a master NS for ${domain}"
+verbose "Master NS: ${master}"
 
 # if no serial given, get the master server to determine the serial
-if [ -z "$serial" ]; then
-	debug "getting master serial from $master"
-	soa=($($COMMAND_DIG +short SOA @$master $domain | cut -d " " -f 1,3))
-	serial=${soa[1]}
+if [ -z "${serial}" ]; then
+	debug "Getting master serial from ${master}"
+	read -r _ _ serial _ \
+		<<< "$("${COMMAND_DIG}" +short SOA "@${master}" "${domain}")"
 fi
-verbose "Master serial: $serial"
+[ -n "${serial}" ] || error "Cannot grab a serial number from master ${master}"
+verbose "Master serial: ${serial}"
 
-# iterate the NS-RRs grabbed from master dns-server for the domain
-for server in $($COMMAND_DIG +short NS @$master $domain); do
-	debug "getting slave serial from $server"
-	serial_slave=$($COMMAND_DIG +short SOA @$server $domain | cut -d " " -f 3)
-	if [ "x$serial_slave" = "x$serial" ]; then
-		verbose "ok: serial: $serial $domain $server"
+# Grab the slaves from DNS
+if [ -z "${slaves}" ]; then
+	debug "Getting slave NS information from ${master}"
+	slaves="$("${COMMAND_DIG}" +short NS "@${master}" "${domain}")"
+fi
+[ -n "${slaves}" ] || error "Cannot query the NS entries for ${domain}"
+
+# Iterate over the given NS-RRs and test serials
+for server in ${slaves}; do
+	debug "Getting slave serial from ${server}"
+	read -r _ _ serial_slave _ \
+		<<< "$("${COMMAND_DIG}" +short +norecurse SOA "@${server}" "${domain}")"
+
+	if [ "x${serial_slave}" = "x${serial}" ]; then
+		verbose "OK:  ${domain} ${server} ${serial}"
 		else
-			verbose "BAD: $domain $server $serial_slave"
-			fails=$(($fails + 1))
-			debug "incrementing failed states to $fails"
+			verbose "BAD: ${domain} ${server} ${serial_slave}"
+			fails=$((fails + 1))
+			debug "Incrementing failed states to ${fails}"
 	fi
 done
 
 # interpret the amount of fails
-if [[ -n "$warn" && $fails -gt $warn ]]; then
-	state=$STATE_WARN
-	msg="DNS WARN, master serial: $serial, fails: $fails"
+if [ -n "${warn}" ] && [ "${fails}" -gt "${warn}" ]; then
+	state="${STATE_WARN}"
+	msg="DNS WARN, master serial: ${serial}, fails: ${fails}"
 fi
-if [[ -n "$crit" && $fails -gt $crit ]]; then
-	state=$STATE_CRITICAL
-	msg="DNS CRITICAL, master serial: $serial, fails: $fails"
+if [ -n "${crit}" ] && [ "${fails}" -gt "${crit}" ]; then
+	state="${STATE_CRITICAL}"
+	msg="DNS CRITICAL, master serial: ${serial}, fails: ${fails}"
 fi
-if [[ -z "$crit" && -z "$warn" && $fails -gt 0 ]]; then
-	state=$STATE_CRITICAL
-	msg="DNS CRITICAL, master serial: $serial, fails: $fails"
+if [ -z "${crit}" ] && [ -z "${warn}" ] && [ "${fails}" -gt 0 ]; then
+	state="${STATE_CRITICAL}"
+	msg="DNS CRITICAL, master serial: ${serial}, fails: ${fails}"
 	else
-		msg="DNS OK, master serial: $serial, fails: $fails"
-		state=$STATE_OK
+		msg="DNS OK, master serial: ${serial}, fails: ${fails}"
+		state="${STATE_OK}"
 fi
 
-echo $msg
-exit $state
+printf '%s\n' "${msg}"
+exit "${state}"
