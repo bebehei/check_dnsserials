@@ -25,7 +25,7 @@
 export PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
 PROGNAME="$(basename "${0}")"
 PROGPATH="$(sed -e 's,[\\/][^\\/][^\\/]*$,,' <<< "${0}")"
-REVISION="1.0.2"
+REVISION="1.1.0"
 COMMAND_DIG="$(command -v "${COMMAND_DIG:-dig}")"
 
 # source a utils.sh from nagios-plugins
