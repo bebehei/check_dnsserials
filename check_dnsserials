@@ -72,6 +72,7 @@ serial=""
 verbose=0
 fails=0
 state="${STATE_UNKNOWN}"
+failedServers=()
 
 while getopts ":vhd:H:S:s:c:w:" opt; do
 	case "${opt}" in
@@ -159,6 +160,7 @@ for server in ${slaves}; do
 		else
 			verbose "BAD: ${domain} ${server} ${serial_slave}"
 			fails=$((fails + 1))
+			failedServers+=(${server})
 			debug "Incrementing failed states to ${fails}"
 	fi
 done
@@ -178,6 +180,10 @@ if [ -z "${crit}" ] && [ -z "${warn}" ] && [ "${fails}" -gt 0 ]; then
 	else
 		msg="DNS OK, master serial: ${serial}, fails: ${fails}"
 		state="${STATE_OK}"
+fi
+
+if [ "${fails}" -gt 0 ]; then
+	msg+=", failed Servers: ${failedServers[@]}"
 fi
 
 printf '%s\n' "${msg}"
