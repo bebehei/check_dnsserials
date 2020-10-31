@@ -23,4 +23,4 @@ It is written in Shell (Bash).
 
 `FAILS` determines the amount of slaves, which are allowed out of sync.
 
-Usecase: If you have 5 servers, and 2 are giving a wrong serial, the plugin will fall to warning if you specifiy `-w 2`. (vice-versa with `-c`)
+Usecase: If you have 5 servers, and 2 are giving a wrong serial, the plugin will state warning if you specifiy `-w 1`. (vice-versa with `-c`)
