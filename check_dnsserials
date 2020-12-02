@@ -49,7 +49,7 @@ if ! "${utils_found:-false}"; then
 	exit 1
 fi
 
-error(){ printf '%s\n' "${@}" >&2; exit "${STATE_UNKNOWN}"; }
+error(){ printf '%s\n' "${@}" >&2; exit ${STATE_UNKNOWN}; }
 debug(){   [ "${verbose}" -lt 2 ] || printf '%s\n' "${@}"; }
 verbose(){ [ "${verbose}" -lt 1 ] || printf '%s\n' "${@}"; }
 
@@ -64,13 +64,15 @@ usage(){
 
 	If any of DNS-MASTER, DNS-SLAVES or SOA-SERIAL is unset, it'll get queried from the DNS system.
 	FIN
-	exit "${STATE_UNKNOWN}"
+	exit ${STATE_UNKNOWN}
 }
 
 master=""
 serial=""
 verbose=0
 fails=0
+crit=0
+warn=0
 state="${STATE_UNKNOWN}"
 failedServers=()
 
@@ -166,25 +168,19 @@ for server in ${slaves}; do
 done
 
 # interpret the amount of fails
-if [ -n "${warn}" ] && [ "${fails}" -gt "${warn}" ]; then
-	state="${STATE_WARN}"
+if [ "${fails}" -gt "${crit}" ]; then
+	state="${STATE_CRITICAL}"
+	msg="DNS CRITICAL, master serial: ${serial}, fails: ${fails}"
+elif [ "${fails}" -gt "${warn}" ]; then
+	state="${STATE_WARNING}"
 	msg="DNS WARN, master serial: ${serial}, fails: ${fails}"
+else
+	state="${STATE_OK}"
+	msg="DNS OK, master serial: ${serial}, fails: ${fails}"
 fi
-if [ -n "${crit}" ] && [ "${fails}" -gt "${crit}" ]; then
-	state="${STATE_CRITICAL}"
-	msg="DNS CRITICAL, master serial: ${serial}, fails: ${fails}"
-fi
-if [ -z "${crit}" ] && [ -z "${warn}" ] && [ "${fails}" -gt 0 ]; then
-	state="${STATE_CRITICAL}"
-	msg="DNS CRITICAL, master serial: ${serial}, fails: ${fails}"
-	else
-		msg="DNS OK, master serial: ${serial}, fails: ${fails}"
-		state="${STATE_OK}"
-fi
-
 if [ "${fails}" -gt 0 ]; then
 	msg+=", failed Servers: ${failedServers[@]}"
 fi
 
 printf '%s\n' "${msg}"
-exit "${state}"
+exit ${state}
